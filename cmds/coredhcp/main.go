@@ -23,6 +23,7 @@ import (
 	pl_nbp "github.com/coredhcp/coredhcp/plugins/nbp"
 	pl_netmask "github.com/coredhcp/coredhcp/plugins/netmask"
 	pl_prefix "github.com/coredhcp/coredhcp/plugins/prefix"
+	pl_pxe "github.com/coredhcp/coredhcp/plugins/pxe"
 	pl_range "github.com/coredhcp/coredhcp/plugins/range"
 	pl_router "github.com/coredhcp/coredhcp/plugins/router"
 	pl_searchdomains "github.com/coredhcp/coredhcp/plugins/searchdomains"
@@ -66,6 +67,7 @@ var desiredPlugins = []*plugins.Plugin{
 	&pl_nbp.Plugin,
 	&pl_netmask.Plugin,
 	&pl_prefix.Plugin,
+	&pl_pxe.Plugin,
 	&pl_range.Plugin,
 	&pl_router.Plugin,
 	&pl_searchdomains.Plugin,
