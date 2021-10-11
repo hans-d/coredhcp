@@ -142,7 +142,9 @@ package pxe
 
 
 import (
+	"fmt"
 	"strings"
+	"net/url"
 
 	"github.com/coredhcp/coredhcp/handler"
 	"github.com/coredhcp/coredhcp/logger"
@@ -159,17 +161,32 @@ var Plugin = plugins.Plugin{
 }
 
 var (
-	opt43, opt60 *dhcpv4.Option
+	opt43, opt60, opt66, opt67 *dhcpv4.Option
 )
+
+func parseArgs(args ...string) (*url.URL, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("Exactly one argument must be passed to PXE plugin, got %d", len(args))
+	}
+	return url.Parse(args[0])
+}
 
 
 func setup4(args ...string) (handler.Handler4, error) {
+	u, err := parseArgs(args...)
+	if err != nil {
+		return nil, err
+	}
+
+	otsn := dhcpv4.OptTFTPServerName(u.Host)
+	opt66 = &otsn
+	obfn := dhcpv4.OptBootFileName(u.Path)
+	opt67 = &obfn
 	oci := dhcpv4.OptClassIdentifier("PXEClient")
 	opt60 = &oci
 
 	pxe_opt6 := []byte{6, 1, 8} // PXE_DISCOVERY
 	pxe_opt255 := []byte{255}   // PXE_END
-
 	ovsi := dhcpv4.OptGeneric(dhcpv4.OptionVendorSpecificInformation, append(pxe_opt6[:], pxe_opt255[:]...))
 	opt43 = &ovsi
 
@@ -180,18 +197,20 @@ func setup4(args ...string) (handler.Handler4, error) {
 func pxeHandler4(req, resp *dhcpv4.DHCPv4) (*dhcpv4.DHCPv4, bool) {
 	// needs to be pxe request
 	if !(len(req.ClassIdentifier()) == 32 && strings.HasPrefix(req.ClassIdentifier(), "PXEClient")) {
-		return resp, false
+		return nil, true // skip reply
 	}
 
 	// req must have specific options
 	cmi := req.GetOneOption(dhcpv4.OptionClientMachineIdentifier)
 	if len(cmi) != 17 {
-		return resp, false
+		return nil, true // skip reply
 	}
 
 	resp.Options.Update(*opt60) // PXEClient
 	resp.UpdateOption(dhcpv4.OptGeneric(dhcpv4.OptionClientMachineIdentifier, cmi)) // Duplicate
 	resp.UpdateOption(*opt43) // PXE options
+	resp.UpdateOption(*opt66) // Server
+	resp.UpdateOption(*opt67) // Filename
 
 
 	log.Debugf("Added PXE options to request")
